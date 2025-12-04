@@ -1,0 +1,607 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Office Reservation System API",
+    "description": "REST API для управления бронированием офисных помещений",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Office Reservation Support",
+      "email": "support@office-reservation.tj"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Development server"
+    }
+  ],
+  "paths": {
+    "/api/offices": {
+      "get": {
+        "summary": "Получить список всех офисов",
+        "description": "Возвращает список всех доступных офисов с их характеристиками",
+        "tags": ["Офисы"],
+        "responses": {
+          "200": {
+            "description": "Список офисов успешно получен",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfficeListResponse"
+                },
+                "example": {
+                  "success": true,
+                  "offices": [
+                    {
+                      "office_id": 1,
+                      "name": "Conference Room A",
+                      "capacity": 10,
+                      "description": "Large conference room with projector"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/offices/availability": {
+      "post": {
+        "summary": "Проверить доступность офиса",
+        "description": "Проверяет, свободен ли офис в указанное время",
+        "tags": ["Доступность"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AvailabilityRequest"
+              },
+              "examples": {
+                "example1": {
+                  "summary": "Проверка на утро",
+                  "value": {
+                    "office_id": 1,
+                    "date": "2025-12-05",
+                    "start_time": "09:00",
+                    "end_time": "10:00"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Результат проверки доступности",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityResponse"
+                },
+                "examples": {
+                  "available": {
+                    "summary": "Офис доступен",
+                    "value": {
+                      "success": true,
+                      "available": true,
+                      "message": "Conference Room A доступен",
+                      "data": {
+                        "office_id": 1,
+                        "office_name": "Conference Room A"
+                      }
+                    }
+                  },
+                  "not_available": {
+                    "summary": "Офис занят",
+                    "value": {
+                      "success": true,
+                      "available": false,
+                      "message": "Conference Room A занят",
+                      "conflicts": [
+                        {
+                          "user": "Фарход Раҳимов",
+                          "email": "farhod.rahimov@mail.tj",
+                          "phone": "+992927654321",
+                          "until": "2025-12-05 11:00:00"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Офис не найден",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reservations": {
+      "post": {
+        "summary": "Создать бронирование",
+        "description": "Создает новое бронирование офиса с отправкой уведомлений",
+        "tags": ["Бронирование"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReservationRequest"
+              },
+              "examples": {
+                "example1": {
+                  "summary": "Бронирование конференц-зала",
+                  "value": {
+                    "office_id": 1,
+                    "name": "Фарход Раҳимов",
+                    "email": "farhod.rahimov@mail.tj",
+                    "phone": "+992927654321",
+                    "date": "2025-12-05",
+                    "start_time": "09:00",
+                    "end_time": "10:00"
+                  }
+                },
+                "example2": {
+                  "summary": "Бронирование переговорной",
+                  "value": {
+                    "office_id": 2,
+                    "name": "Зарина Саидова",
+                    "email": "zarina.saidova@gmail.tj",
+                    "phone": "+992918765432",
+                    "date": "2025-12-06",
+                    "start_time": "14:00",
+                    "end_time": "16:00"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Бронирование успешно создано",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservationResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "[SUCCESS] Успешно забронирован Conference Room A!",
+                  "data": {
+                    "reservation_id": 123,
+                    "office_id": 1,
+                    "office_name": "Conference Room A",
+                    "start_time": "2025-12-05 09:00:00",
+                    "end_time": "2025-12-05 10:00:00"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверные данные запроса",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Офис не найден",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Конфликт бронирования - время уже занято",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/offices/info": {
+      "post": {
+        "summary": "Получить информацию о занятости офиса",
+        "description": "Возвращает информацию о том, кто занимает офис в указанное время",
+        "tags": ["Офисы"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfficeInfoRequest"
+              },
+              "examples": {
+                "example1": {
+                  "summary": "Проверка занятости",
+                  "value": {
+                    "office_id": 1,
+                    "date": "2025-12-05",
+                    "start_time": "09:00",
+                    "end_time": "10:00"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Информация об офисе получена",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfficeInfoResponse"
+                },
+                "examples": {
+                  "occupied": {
+                    "summary": "Офис занят",
+                    "value": {
+                      "success": true,
+                      "occupied": true,
+                      "message": "Conference Room A занят",
+                      "data": {
+                        "office_id": 1,
+                        "office_name": "Conference Room A",
+                        "occupied_by": "Муҳаммадали Юсуфов",
+                        "occupant_email": "muhammadali.yusufov@mail.tj",
+                        "occupant_phone": "+992935123456",
+                        "from_time": "2025-12-05 09:00:00",
+                        "until_time": "2025-12-05 11:00:00"
+                      }
+                    }
+                  },
+                  "not_occupied": {
+                    "summary": "Офис свободен",
+                    "value": {
+                      "success": true,
+                      "occupied": false,
+                      "message": "Conference Room A доступен"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Офис не найден",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Office": {
+        "type": "object",
+        "properties": {
+          "office_id": {
+            "type": "integer",
+            "description": "ID офиса",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Название офиса",
+            "example": "Conference Room A"
+          },
+          "capacity": {
+            "type": "integer",
+            "description": "Вместимость",
+            "example": 10
+          },
+          "description": {
+            "type": "string",
+            "description": "Описание офиса",
+            "example": "Large conference room with projector"
+          }
+        }
+      },
+      "OfficeListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "offices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Office"
+            }
+          }
+        }
+      },
+      "AvailabilityRequest": {
+        "type": "object",
+        "required": ["office_id", "date", "start_time", "end_time"],
+        "properties": {
+          "office_id": {
+            "type": "integer",
+            "description": "ID офиса",
+            "example": 1
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Дата в формате YYYY-MM-DD",
+            "example": "2025-12-05"
+          },
+          "start_time": {
+            "type": "string",
+            "description": "Время начала в формате HH:MM",
+            "example": "09:00"
+          },
+          "end_time": {
+            "type": "string",
+            "description": "Время окончания в формате HH:MM",
+            "example": "10:00"
+          }
+        }
+      },
+      "AvailabilityResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "available": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Conference Room A доступен"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "office_id": {
+                "type": "integer"
+              },
+              "office_name": {
+                "type": "string"
+              }
+            }
+          },
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "user": {
+                  "type": "string",
+                  "example": "Фарход Раҳимов"
+                },
+                "email": {
+                  "type": "string",
+                  "example": "farhod.rahimov@mail.tj"
+                },
+                "phone": {
+                  "type": "string",
+                  "example": "+992927654321"
+                },
+                "until": {
+                  "type": "string",
+                  "example": "2025-12-05 11:00:00"
+                }
+              }
+            }
+          }
+        }
+      },
+      "CreateReservationRequest": {
+        "type": "object",
+        "required": ["office_id", "name", "email", "phone", "date", "start_time", "end_time"],
+        "properties": {
+          "office_id": {
+            "type": "integer",
+            "description": "ID офиса",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Полное имя",
+            "example": "Фарход Раҳимов"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email адрес",
+            "example": "farhod.rahimov@mail.tj"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Номер телефона",
+            "example": "+992927654321"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Дата в формате YYYY-MM-DD",
+            "example": "2025-12-05"
+          },
+          "start_time": {
+            "type": "string",
+            "description": "Время начала в формате HH:MM",
+            "example": "09:00"
+          },
+          "end_time": {
+            "type": "string",
+            "description": "Время окончания в формате HH:MM",
+            "example": "10:00"
+          }
+        }
+      },
+      "ReservationResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "[SUCCESS] Успешно забронирован Conference Room A!"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "reservation_id": {
+                "type": "integer",
+                "example": 123
+              },
+              "office_id": {
+                "type": "integer",
+                "example": 1
+              },
+              "office_name": {
+                "type": "string",
+                "example": "Conference Room A"
+              },
+              "start_time": {
+                "type": "string",
+                "example": "2025-12-05 09:00:00"
+              },
+              "end_time": {
+                "type": "string",
+                "example": "2025-12-05 10:00:00"
+              }
+            }
+          }
+        }
+      },
+      "OfficeInfoRequest": {
+        "type": "object",
+        "required": ["office_id", "date", "start_time", "end_time"],
+        "properties": {
+          "office_id": {
+            "type": "integer",
+            "description": "ID офиса",
+            "example": 1
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Дата в формате YYYY-MM-DD",
+            "example": "2025-12-05"
+          },
+          "start_time": {
+            "type": "string",
+            "description": "Время начала в формате HH:MM",
+            "example": "09:00"
+          },
+          "end_time": {
+            "type": "string",
+            "description": "Время окончания в формате HH:MM",
+            "example": "10:00"
+          }
+        }
+      },
+      "OfficeInfoResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "occupied": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Conference Room A занят"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "office_id": {
+                "type": "integer",
+                "example": 1
+              },
+              "office_name": {
+                "type": "string",
+                "example": "Conference Room A"
+              },
+              "occupied_by": {
+                "type": "string",
+                "example": "Муҳаммадали Юсуфов"
+              },
+              "occupant_email": {
+                "type": "string",
+                "example": "muhammadali.yusufov@mail.tj"
+              },
+              "occupant_phone": {
+                "type": "string",
+                "example": "+992935123456"
+              },
+              "from_time": {
+                "type": "string",
+                "example": "2025-12-05 09:00:00"
+              },
+              "until_time": {
+                "type": "string",
+                "example": "2025-12-05 11:00:00"
+              }
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Office not found"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Офисы",
+      "description": "Операции с офисами"
+    },
+    {
+      "name": "Доступность",
+      "description": "Проверка доступности офисов"
+    },
+    {
+      "name": "Бронирование",
+      "description": "Создание и управление бронированиями"
+    }
+  ]
+}
