@@ -1,5 +1,5 @@
 from .domain_exceptions import (
-    DomainException,
+    DomainError,
     InvalidTimeSlotError,
     OfficeNotAvailableError,
     OfficeNotFoundError,
@@ -8,7 +8,7 @@ from .domain_exceptions import (
 )
 
 __all__ = [
-    "DomainException",
+    "DomainError",
     "InvalidTimeSlotError",
     "OfficeNotAvailableError",
     "OfficeNotFoundError",

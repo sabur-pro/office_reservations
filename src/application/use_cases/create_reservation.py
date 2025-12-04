@@ -1,11 +1,4 @@
-from datetime import datetime
 
-from ..dto.reservation_dto import ReservationDTO
-from ..interfaces.notification import NotificationData, NotificationServiceInterface
-from ..interfaces.repository import (
-    OfficeRepositoryInterface,
-    ReservationRepositoryInterface,
-)
 from ...domain.entities.reservation import Reservation
 from ...domain.entities.user import User
 from ...domain.exceptions.domain_exceptions import (
@@ -14,6 +7,12 @@ from ...domain.exceptions.domain_exceptions import (
 )
 from ...domain.value_objects.contact_info import ContactInfo
 from ...domain.value_objects.time_slot import TimeSlot
+from ..dto.reservation_dto import ReservationDTO
+from ..interfaces.notification import NotificationData, NotificationServiceInterface
+from ..interfaces.repository import (
+    OfficeRepositoryInterface,
+    ReservationRepositoryInterface,
+)
 
 
 class CreateReservationUseCase:
@@ -26,7 +25,7 @@ class CreateReservationUseCase:
         self._office_repository = office_repository
         self._reservation_repository = reservation_repository
         self._notification_service = notification_service
-    
+
     def execute(
         self,
         office_id: int,
@@ -35,16 +34,14 @@ class CreateReservationUseCase:
         user_phone: str,
         time_slot: TimeSlot,
     ) -> ReservationDTO:
-        office = self._office_repository.find_by_id(office_id)
+        office = self._office_repository.get_by_id(office_id)
         if not office:
             raise OfficeNotFoundError(office_id)
-        
-        conflicting_reservations = (
-            self._reservation_repository.find_by_office_and_time(
-                office_id, time_slot
-            )
+
+        conflicting_reservations = self._reservation_repository.find_by_office_and_time(
+            office_id, time_slot
         )
-        
+
         if conflicting_reservations:
             conflict = conflicting_reservations[0]
             raise ReservationConflictError(
@@ -54,20 +51,20 @@ class CreateReservationUseCase:
                 conflicting_email=conflict.user.contact_info.email,
                 conflicting_phone=conflict.user.contact_info.phone,
             )
-        
+
         contact_info = ContactInfo(email=user_email, phone=user_phone)
         user = User(user_id=None, name=user_name, contact_info=contact_info)
-        
+
         reservation = Reservation(
             office_id=office_id,
             user=user,
             time_slot=time_slot,
         )
-        
+
         reservation.confirm()
-        
+
         saved_reservation = self._reservation_repository.save(reservation)
-        
+
         notification_data = NotificationData(
             recipient_name=user_name,
             recipient_email=user_email,
@@ -78,9 +75,9 @@ class CreateReservationUseCase:
             end_time=time_slot.end_time.strftime("%Y-%m-%d %H:%M"),
             reservation_id=saved_reservation.reservation_id or 0,
         )
-        
+
         self._notification_service.send_all(notification_data)
-        
+
         return ReservationDTO(
             reservation_id=saved_reservation.reservation_id,
             office_id=office_id,

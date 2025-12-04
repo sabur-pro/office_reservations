@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from ...domain.entities.reservation import Reservation
-
 
 @dataclass
 class NotificationData:
@@ -20,13 +18,13 @@ class NotificationServiceInterface(ABC):
     @abstractmethod
     def send_email(self, notification_data: NotificationData) -> bool:
         pass
-    
+
     @abstractmethod
     def send_sms(self, notification_data: NotificationData) -> bool:
         pass
-    
+
     def send_all(self, notification_data: NotificationData) -> dict:
         return {
             "email": self.send_email(notification_data),
-            "sms": self.send_sms(notification_data)
+            "sms": self.send_sms(notification_data),
         }

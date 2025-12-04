@@ -1,10 +1,9 @@
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional
 
 
 @dataclass
 class ReservationDTO:
-    reservation_id: Optional[int]
     office_id: int
     office_name: str
     user_name: str
@@ -14,6 +13,7 @@ class ReservationDTO:
     end_time: str
     status: str
     created_at: str
+    reservation_id: Optional[int] = None
 
 
 @dataclass
@@ -32,7 +32,7 @@ class AvailabilityDTO:
     is_available: bool
     requested_start_time: str
     requested_end_time: str
-    conflicting_reservations: List[ConflictingReservationDTO]
+    conflicting_reservations: list[ConflictingReservationDTO]
     message: str
 
 

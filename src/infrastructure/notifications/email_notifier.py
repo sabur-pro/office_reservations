@@ -8,10 +8,10 @@ class EmailNotifier(NotificationServiceInterface):
     def __init__(self, smtp_host: str = "", smtp_port: int = 587) -> None:
         self._smtp_host = smtp_host
         self._smtp_port = smtp_port
-    
+
     def send_email(self, notification_data: NotificationData) -> bool:
         email_content = self._build_email_content(notification_data)
-        
+
         print("=" * 70)
         print("EMAIL NOTIFICATION")
         print("=" * 70)
@@ -21,12 +21,12 @@ class EmailNotifier(NotificationServiceInterface):
         print(email_content)
         print("=" * 70)
         print()
-        
+
         return True
-    
-    def send_sms(self, notification_data: NotificationData) -> bool:
+
+    def send_sms(self, _notification_data: NotificationData) -> bool:
         return False
-    
+
     @staticmethod
     def _build_email_content(notification_data: NotificationData) -> str:
         return f"""

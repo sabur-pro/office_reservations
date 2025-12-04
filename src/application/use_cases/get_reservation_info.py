@@ -1,10 +1,10 @@
+from ...domain.exceptions.domain_exceptions import OfficeNotFoundError
+from ...domain.value_objects.time_slot import TimeSlot
 from ..dto.reservation_dto import ReservationInfoDTO
 from ..interfaces.repository import (
     OfficeRepositoryInterface,
     ReservationRepositoryInterface,
 )
-from ...domain.exceptions.domain_exceptions import OfficeNotFoundError
-from ...domain.value_objects.time_slot import TimeSlot
 
 
 class GetReservationInfoUseCase:
@@ -15,16 +15,14 @@ class GetReservationInfoUseCase:
     ) -> None:
         self._office_repository = office_repository
         self._reservation_repository = reservation_repository
-    
+
     def execute(self, office_id: int, time_slot: TimeSlot) -> ReservationInfoDTO:
-        office = self._office_repository.find_by_id(office_id)
+        office = self._office_repository.get_by_id(office_id)
         if not office:
             raise OfficeNotFoundError(office_id)
-        
-        reservations = self._reservation_repository.find_by_office_and_time(
-            office_id, time_slot
-        )
-        
+
+        reservations = self._reservation_repository.find_by_office_and_time(office_id, time_slot)
+
         if not reservations:
             return ReservationInfoDTO(
                 office_id=office_id,
@@ -36,9 +34,9 @@ class GetReservationInfoUseCase:
                     f"{time_slot.end_time.strftime('%H:%M')}"
                 ),
             )
-        
+
         reservation = reservations[0]
-        
+
         return ReservationInfoDTO(
             office_id=office_id,
             office_name=office.name,
