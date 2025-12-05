@@ -7,11 +7,15 @@ from urllib.parse import urlparse
 
 sys.path.insert(0, str(__file__).rsplit("/src", 1)[0])
 
+from config.logging import get_logger, setup_logging
+from config.settings import settings
 from src.bootstrap import (
     create_dependency_container,
     get_database_connection,
     initialize_database,
 )
+
+logger = get_logger(__name__)
 
 db_connection = None
 
@@ -190,12 +194,15 @@ class APIHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(data, ensure_ascii=False).encode("utf-8"))
 
-    def log_message(self, _fmt: str, *_args: Any) -> None:
-        return
+    def log_message(self, fmt: str, *args: Any) -> None:
+        logger.debug(f"{self.address_string()} - {fmt % args}")
 
 
 def run_server(port: int = 8000) -> None:
     global db_connection, reservation_controller, office_repository  # noqa: PLW0603
+
+    setup_logging(debug=settings.debug)
+    logger.info("Starting Office Reservation API...")
 
     db_connection = get_database_connection()
     initialize_database(db_connection)
@@ -204,15 +211,15 @@ def run_server(port: int = 8000) -> None:
     server_address = ("", port)
     httpd = HTTPServer(server_address, APIHandler)
 
-    print("Database initialized")
-    print("Office Reservation API started")
-    print(f"Server running on http://localhost:{port}")
-    print(f"Swagger documentation: http://localhost:{port}/docs")
+    logger.info("Database initialized")
+    logger.info(f"Server running on http://localhost:{port}")
+    logger.info(f"Swagger documentation: http://localhost:{port}/docs")
+    logger.info(f"Debug mode: {settings.debug}")
 
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\n👋 Shutting down server...")
+        logger.info("Shutting down server...")
         httpd.server_close()
 
 
