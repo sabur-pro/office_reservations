@@ -31,3 +31,4 @@ venv.bak/
 htmlcov/
 *.db
 *.sqlite3
+.env-production
