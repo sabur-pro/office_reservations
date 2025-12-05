@@ -2,6 +2,7 @@ import json
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from socketserver import ThreadingMixIn
 from typing import Any, Optional
 from urllib.parse import urlparse
 
@@ -25,6 +26,10 @@ cache = None
 rate_limiter: Optional[RateLimiter] = None
 reservation_controller = None
 office_repository = None
+
+
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+    daemon_threads = True
 
 
 class APIHandler(BaseHTTPRequestHandler):
@@ -237,7 +242,7 @@ def run_server(port: int = 8000) -> None:
     reservation_controller, office_repository = create_dependency_container(db_connection, cache)
 
     server_address = ("", port)
-    httpd = HTTPServer(server_address, APIHandler)
+    httpd = ThreadedHTTPServer(server_address, APIHandler)
 
     logger.info("Database initialized")
     logger.info("Redis cache enabled" if cache else "Redis cache disabled")
