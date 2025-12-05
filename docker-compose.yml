@@ -35,7 +35,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: office_user
-      POSTGRES_PASSWORD: office_password
+      POSTGRES_PASSWORD: "123456"
       POSTGRES_DB: office_reservations
     volumes:
       - postgres_data:/var/lib/postgresql/data
