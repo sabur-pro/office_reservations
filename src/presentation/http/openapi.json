@@ -11,6 +11,10 @@
   },
   "servers": [
     {
+      "url": "https://api-office-reservations.intelligent.tj",
+      "description": "Production server"
+    },
+    {
       "url": "http://localhost:8000",
       "description": "Development server"
     }
