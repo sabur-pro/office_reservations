@@ -27,6 +27,11 @@ class Settings:
     osonsms_sender: str
     osonsms_server: str
 
+    redis_url: str
+    cache_ttl: int
+    rate_limit_requests: int
+    rate_limit_window: int
+
     @classmethod
     def from_env(cls) -> "Settings":
         return cls(
@@ -41,6 +46,10 @@ class Settings:
             osonsms_hash=os.getenv("OSONSMS_HASH", ""),
             osonsms_sender=os.getenv("OSONSMS_SENDER", "OsonSMS"),
             osonsms_server=os.getenv("OSONSMS_SERVER", "https://api.osonsms.com/sendsms_v1.php"),
+            redis_url=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
+            cache_ttl=int(os.getenv("CACHE_TTL", "300")),
+            rate_limit_requests=int(os.getenv("RATE_LIMIT_REQUESTS", "100")),
+            rate_limit_window=int(os.getenv("RATE_LIMIT_WINDOW", "60")),
         )
 
 

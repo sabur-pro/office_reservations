@@ -2,7 +2,7 @@ import json
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 from urllib.parse import urlparse
 
 sys.path.insert(0, str(__file__).rsplit("/src", 1)[0])
@@ -10,21 +10,28 @@ sys.path.insert(0, str(__file__).rsplit("/src", 1)[0])
 from config.logging import get_logger, setup_logging
 from config.settings import settings
 from src.bootstrap import (
+    create_cache,
     create_dependency_container,
+    create_rate_limiter,
     get_database_connection,
     initialize_database,
 )
+from src.infrastructure.security.rate_limiter import RateLimiter
 
 logger = get_logger(__name__)
 
 db_connection = None
-
+cache = None
+rate_limiter: Optional[RateLimiter] = None
 reservation_controller = None
 office_repository = None
 
 
 class APIHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
+        if not self._check_rate_limit():
+            return
+
         parsed_path = urlparse(self.path)
         path = parsed_path.path
 
@@ -42,6 +49,9 @@ class APIHandler(BaseHTTPRequestHandler):
             self.send_json_response(404, {"error": "Not found"})
 
     def do_POST(self) -> None:
+        if not self._check_rate_limit():
+            return
+
         content_length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_length).decode("utf-8")
 
@@ -62,6 +72,22 @@ class APIHandler(BaseHTTPRequestHandler):
             self.handle_get_office_info(data)
         else:
             self.send_json_response(404, {"error": "Not found"})
+
+    def _check_rate_limit(self) -> bool:
+        if not rate_limiter:
+            return True
+
+        client_ip = self.client_address[0]
+        if not rate_limiter.is_allowed(client_ip):
+            self.send_json_response(
+                429,
+                {
+                    "error": "Too Many Requests",
+                    "message": f"Rate limit exceeded. Try again in {settings.rate_limit_window} seconds.",
+                },
+            )
+            return False
+        return True
 
     def handle_list_offices(self) -> None:
         try:
@@ -178,8 +204,6 @@ class APIHandler(BaseHTTPRequestHandler):
         self.wfile.write(html.encode("utf-8"))
 
     def serve_openapi_spec(self) -> None:
-
-        
         spec_path = Path(__file__).parent / "openapi.json"
         with spec_path.open(encoding="utf-8") as f:
             spec = f.read()
@@ -199,19 +223,25 @@ class APIHandler(BaseHTTPRequestHandler):
 
 
 def run_server(port: int = 8000) -> None:
-    global db_connection, reservation_controller, office_repository  # noqa: PLW0603
+    global db_connection, cache, rate_limiter  # noqa: PLW0603
+    global reservation_controller, office_repository
 
     setup_logging(debug=settings.debug)
     logger.info("Starting Office Reservation API...")
 
+    cache = create_cache()
+    rate_limiter = create_rate_limiter(cache)
+
     db_connection = get_database_connection()
     initialize_database(db_connection)
-    reservation_controller, office_repository = create_dependency_container(db_connection)
+    reservation_controller, office_repository = create_dependency_container(db_connection, cache)
 
     server_address = ("", port)
     httpd = HTTPServer(server_address, APIHandler)
 
     logger.info("Database initialized")
+    logger.info("Redis cache enabled" if cache else "Redis cache disabled")
+    logger.info(f"Rate limit: {settings.rate_limit_requests} requests per {settings.rate_limit_window}s")
     logger.info(f"Server running on http://localhost:{port}")
     logger.info(f"Swagger documentation: http://localhost:{port}/docs")
     logger.info(f"Debug mode: {settings.debug}")

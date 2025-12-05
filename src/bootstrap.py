@@ -1,9 +1,15 @@
 from config.settings import settings
+from src.application.interfaces.cache import CacheInterface
+from src.application.interfaces.repository import OfficeRepositoryInterface
 from src.application.use_cases.check_availability import CheckAvailabilityUseCase
 from src.application.use_cases.create_reservation import CreateReservationUseCase
 from src.application.use_cases.get_reservation_info import GetReservationInfoUseCase
 from src.domain.entities.office import Office
+from src.infrastructure.cache.redis_cache import RedisCache
 from src.infrastructure.database.connection import DatabaseConnection
+from src.infrastructure.database.repositories.cached_office_repository import (
+    CachedOfficeRepository,
+)
 from src.infrastructure.database.repositories.office_repository import OfficeRepository
 from src.infrastructure.database.repositories.reservation_repository import (
     ReservationRepository,
@@ -13,6 +19,7 @@ from src.infrastructure.notifications.combined_notifier import (
 )
 from src.infrastructure.notifications.email_notifier import EmailNotifier
 from src.infrastructure.notifications.sms_notifier import SMSNotifier
+from src.infrastructure.security.rate_limiter import RateLimiter
 from src.presentation.controllers.reservation_controller import ReservationController
 
 
@@ -63,10 +70,29 @@ def initialize_database(db: DatabaseConnection) -> None:
             office_repo.save(office)
 
 
-def create_dependency_container(db: DatabaseConnection) -> tuple:
+def create_cache() -> CacheInterface:
+    return RedisCache(settings.redis_url)
+
+
+def create_rate_limiter(cache: CacheInterface) -> RateLimiter:
+    return RateLimiter(
+        cache=cache,
+        max_requests=settings.rate_limit_requests,
+        window_seconds=settings.rate_limit_window,
+    )
+
+
+def create_dependency_container(
+    db: DatabaseConnection, cache: CacheInterface
+) -> tuple[ReservationController, OfficeRepositoryInterface]:
     session = db.get_session()
 
-    office_repository = OfficeRepository(session)
+    base_office_repository = OfficeRepository(session)
+    office_repository = CachedOfficeRepository(
+        repository=base_office_repository,
+        cache=cache,
+        ttl_seconds=settings.cache_ttl,
+    )
     reservation_repository = ReservationRepository(session)
 
     email_notifier = EmailNotifier(
