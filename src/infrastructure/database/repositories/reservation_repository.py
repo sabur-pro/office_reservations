@@ -4,7 +4,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from ....application.interfaces.repository import ReservationRepositoryInterface
-from ....domain.entities.reservation import Reservation
+from ....domain.entities.reservation import Reservation, ReservationStatus
 from ....domain.entities.user import User
 from ....domain.value_objects.contact_info import ContactInfo
 from ....domain.value_objects.time_slot import TimeSlot
@@ -87,7 +87,7 @@ class ReservationRepository(ReservationRepositoryInterface):
         return Reservation(
             reservation_id=model.reservation_id,  # type: ignore
             office_id=model.office_id,  # type: ignore
-            status=model.status,  # type: ignore
+            status=ReservationStatus(model.status),  # type: ignore
             created_at=model.created_at,  # type: ignore
             user=User(
                 user_id=None,  # User ID not stored in this simple model

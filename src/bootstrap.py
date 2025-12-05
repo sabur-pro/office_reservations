@@ -69,9 +69,18 @@ def create_dependency_container(db: DatabaseConnection) -> tuple:
     office_repository = OfficeRepository(session)
     reservation_repository = ReservationRepository(session)
 
-    email_notifier = EmailNotifier(smtp_host=settings.smtp_host, smtp_port=settings.smtp_port)
+    email_notifier = EmailNotifier(
+        smtp_host=settings.smtp_host,
+        smtp_port=settings.smtp_port,
+        smtp_username=settings.smtp_username,
+        smtp_password=settings.smtp_password,
+        from_email=settings.smtp_from_email,
+    )
     sms_notifier = SMSNotifier(
-        api_key=settings.sms_api_key, sender_number=settings.sms_sender_number
+        login=settings.osonsms_login,
+        hash_key=settings.osonsms_hash,
+        sender=settings.osonsms_sender,
+        server=settings.osonsms_server,
     )
     notification_service = CombinedNotificationService(
         email_notifier=email_notifier, sms_notifier=sms_notifier
